@@ -1,0 +1,125 @@
+import { sql, relations } from "drizzle-orm";
+import { pgTable, text, varchar, integer, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+// Re-export auth models
+export * from "./models/auth";
+
+// Node type enum for discussion nodes
+export const nodeTypeEnum = pgEnum("node_type", ["agree", "disagree", "neutral"]);
+
+// Reaction type enum
+export const reactionTypeEnum = pgEnum("reaction_type", ["like", "dislike"]);
+
+// Topics - the main discussion starters
+export const topics = pgTable("topics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  authorId: varchar("author_id").notNull(),
+  imageUrl: text("image_url"),
+  agreeCount: integer("agree_count").default(0).notNull(),
+  disagreeCount: integer("disagree_count").default(0).notNull(),
+  likeCount: integer("like_count").default(0).notNull(),
+  dislikeCount: integer("dislike_count").default(0).notNull(),
+  nodeCount: integer("node_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Discussion nodes - agree/disagree/neutral responses
+export const nodes = pgTable("nodes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  topicId: varchar("topic_id").notNull(),
+  parentId: varchar("parent_id"), // null for top-level nodes
+  authorId: varchar("author_id").notNull(),
+  type: nodeTypeEnum("type").notNull(),
+  content: text("content").notNull(),
+  imageUrl: text("image_url"),
+  agreeCount: integer("agree_count").default(0).notNull(),
+  disagreeCount: integer("disagree_count").default(0).notNull(),
+  likeCount: integer("like_count").default(0).notNull(),
+  dislikeCount: integer("dislike_count").default(0).notNull(),
+  replyCount: integer("reply_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Reactions - likes/dislikes on topics and nodes
+export const reactions = pgTable("reactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  topicId: varchar("topic_id").notNull(),
+  nodeId: varchar("node_id"),
+  type: reactionTypeEnum("type").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Relations
+export const topicsRelations = relations(topics, ({ many }) => ({
+  nodes: many(nodes),
+  reactions: many(reactions),
+}));
+
+export const nodesRelations = relations(nodes, ({ one, many }) => ({
+  topic: one(topics, {
+    fields: [nodes.topicId],
+    references: [topics.id],
+  }),
+  parent: one(nodes, {
+    fields: [nodes.parentId],
+    references: [nodes.id],
+    relationName: "nodeReplies",
+  }),
+  replies: many(nodes, {
+    relationName: "nodeReplies",
+  }),
+  reactions: many(reactions),
+}));
+
+export const reactionsRelations = relations(reactions, ({ one }) => ({
+  topic: one(topics, {
+    fields: [reactions.topicId],
+    references: [topics.id],
+  }),
+  node: one(nodes, {
+    fields: [reactions.nodeId],
+    references: [nodes.id],
+  }),
+}));
+
+// Insert schemas
+export const insertTopicSchema = createInsertSchema(topics).omit({
+  id: true,
+  agreeCount: true,
+  disagreeCount: true,
+  likeCount: true,
+  dislikeCount: true,
+  nodeCount: true,
+  createdAt: true,
+});
+
+export const insertNodeSchema = createInsertSchema(nodes).omit({
+  id: true,
+  agreeCount: true,
+  disagreeCount: true,
+  likeCount: true,
+  dislikeCount: true,
+  replyCount: true,
+  createdAt: true,
+});
+
+export const insertReactionSchema = createInsertSchema(reactions).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  type: z.enum(["like", "dislike"]),
+});
+
+// Types
+export type InsertTopic = z.infer<typeof insertTopicSchema>;
+export type Topic = typeof topics.$inferSelect;
+export type InsertNode = z.infer<typeof insertNodeSchema>;
+export type Node = typeof nodes.$inferSelect;
+export type InsertReaction = z.infer<typeof insertReactionSchema>;
+export type Reaction = typeof reactions.$inferSelect;
+export type NodeType = "agree" | "disagree" | "neutral";
