@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, pgEnum, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -17,13 +17,18 @@ export const topics = pgTable("topics", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
   content: text("content").notNull(),
-  authorId: varchar("author_id").notNull(),
+  authorId: varchar("author_id"), // nullable for deleted authors
   imageUrl: text("image_url"),
+  country: varchar("country", { length: 100 }), // for location filtering
+  promotedFromNodeId: varchar("promoted_from_node_id"), // if this topic was promoted from a node
+  promotedFromTopicId: varchar("promoted_from_topic_id"), // original topic the node belonged to
   agreeCount: integer("agree_count").default(0).notNull(),
   disagreeCount: integer("disagree_count").default(0).notNull(),
   likeCount: integer("like_count").default(0).notNull(),
   dislikeCount: integer("dislike_count").default(0).notNull(),
   nodeCount: integer("node_count").default(0).notNull(),
+  isDeleted: boolean("is_deleted").default(false).notNull(),
+  editedAt: timestamp("edited_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -32,7 +37,7 @@ export const nodes = pgTable("nodes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   topicId: varchar("topic_id").notNull(),
   parentId: varchar("parent_id"), // null for top-level nodes
-  authorId: varchar("author_id").notNull(),
+  authorId: varchar("author_id"), // nullable for deleted authors
   type: nodeTypeEnum("type").notNull(),
   content: text("content").notNull(),
   imageUrl: text("image_url"),
@@ -41,6 +46,8 @@ export const nodes = pgTable("nodes", {
   likeCount: integer("like_count").default(0).notNull(),
   dislikeCount: integer("dislike_count").default(0).notNull(),
   replyCount: integer("reply_count").default(0).notNull(),
+  isDeleted: boolean("is_deleted").default(false).notNull(),
+  editedAt: timestamp("edited_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -90,12 +97,21 @@ export const reactionsRelations = relations(reactions, ({ one }) => ({
 // Insert schemas
 export const insertTopicSchema = createInsertSchema(topics).omit({
   id: true,
+  promotedFromNodeId: true,
+  promotedFromTopicId: true,
   agreeCount: true,
   disagreeCount: true,
   likeCount: true,
   dislikeCount: true,
   nodeCount: true,
+  isDeleted: true,
+  editedAt: true,
   createdAt: true,
+});
+
+export const promoteNodeSchema = z.object({
+  nodeId: z.string(),
+  title: z.string().min(1).max(200),
 });
 
 export const insertNodeSchema = createInsertSchema(nodes).omit({
@@ -105,7 +121,19 @@ export const insertNodeSchema = createInsertSchema(nodes).omit({
   likeCount: true,
   dislikeCount: true,
   replyCount: true,
+  isDeleted: true,
+  editedAt: true,
   createdAt: true,
+});
+
+// Update schemas for editing
+export const updateTopicSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  content: z.string().min(1).max(5000).optional(),
+});
+
+export const updateNodeSchema = z.object({
+  content: z.string().min(1).max(5000),
 });
 
 export const insertReactionSchema = createInsertSchema(reactions).omit({

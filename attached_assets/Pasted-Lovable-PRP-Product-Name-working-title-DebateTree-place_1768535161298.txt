@@ -1,0 +1,251 @@
+Lovable PRP
+Product Name (working title)
+
+DebateTree (placeholder — can be renamed later)
+
+One-sentence idea
+
+A social, mobile-first discussion platform that structures debates into agree, disagree, and neutral nodes, making conversations clearer, more thoughtful, and measurable.
+
+Problem it solves
+
+Traditional discussion platforms (Reddit, Twitter, comment sections) flatten debate, causing repetition, noise, and low-quality arguments. This product introduces a structured node-based debate system that makes agreement, disagreement, and sentiment explicit, while remaining social and familiar.
+
+Target Audience
+
+General public (casual browsing, late-night scrolling)
+
+Students and academics (structured debates, argument clarity)
+
+Knowledge workers and thinkers
+
+Anyone who enjoys discussion or debate
+
+The app is universal, not niche — designed to scale from casual topics to high-level discourse.
+
+Platform
+
+Responsive web app
+
+Mobile-first UX (optimized for vertical scrolling and touch)
+
+Desktop support later
+
+Core User Journey
+1. Home / Discovery
+
+Instagram-style For You feed (main screen)
+
+Bottom navigation tabs:
+
+For You
+
+Toggles: For You / Subscriptions / Trending
+
+Search
+
+Settings
+
+Feed items are discussion topics, not comments
+
+2. Browsing
+
+Anyone can browse without logging in
+
+Non-logged-in users may have limited node depth expansion
+
+Logged-in users can fully explore discussions
+
+3. Discussion Page
+
+Clicking a topic opens a discussion thread page
+
+Persistent back button to navigate up the tree or back to feed
+
+Discussions are structured as a node tree
+
+Each node:
+
+Has a type: Agree / Disagree / Neutral comment
+
+Displays:
+
+Agree count
+
+Disagree count
+
+Like / Dislike counts
+
+Is collapsible
+
+Is sortable (default: most liked)
+
+Other sorts: newest, most replied, engagement rate
+
+4. Interaction
+
+Only logged-in users can:
+
+Post topics
+
+Add agree/disagree/neutral nodes
+
+Like / dislike nodes
+
+When agreeing or disagreeing:
+
+User starts by typing
+
+Can embed:
+
+Text
+
+Images
+
+Links
+
+Video
+
+Lightweight sentiment:
+
+Like 👍
+
+Dislike 👎
+(Independent from agree/disagree node creation)
+
+Core Features (V1)
+Discussion System
+
+Topic creation
+
+Node-based discussion structure
+
+Agree / Disagree / Neutral branching
+
+Collapsible nodes
+
+Sorting options
+
+Content Support
+
+Rich text
+
+Image embeds
+
+Links
+
+Video embeds
+
+Reactions
+
+Like / Dislike per node
+
+Prevent duplicate votes per user
+
+User Accounts
+
+Public browsing
+
+Login required for interaction
+
+Real user profiles with:
+
+Posting history
+
+Engagement stats
+
+Foundation for credibility scoring (basic in v1)
+
+Core Data to Store (V1 Priority)
+
+Topic data (title, categories/tags, creator, timestamps)
+
+Node data (content, type, parent/child relationships)
+
+Reaction data (likes/dislikes, per-user tracking)
+
+Agree/disagree counts and structure
+
+Social Features
+
+User profiles (public)
+
+Follow other users
+
+Mentions (@username)
+
+Notifications (replies, reactions, mentions)
+
+Direct messages (can be phased if needed)
+
+AI & Intelligence (Phased)
+
+Not required for MVP, but planned and designed for:
+
+AI summaries of long discussions
+
+Highlighting strongest arguments
+
+Duplicate argument detection
+
+Auto-tagging topics and nodes
+
+Moderation support (toxicity, spam)
+
+Analytics insights
+
+Analytics & Metrics (Secondary)
+
+Agreement vs disagreement ratios
+
+Engagement rate per node/topic
+
+Controversy or polarization scores
+
+Foundation for credibility weighting later
+
+Design / Vibe
+
+Social and familiar
+
+Blend of:
+
+Reddit (discussion culture)
+
+Instagram (UI familiarity)
+
+TikTok (feed discovery & engagement)
+
+Clean, readable, debate-focused
+
+Avoids clutter and emotional overload
+
+Suggested Stack (High-level)
+
+Supabase — authentication, database, real-time updates
+
+Modern frontend framework (Lovable-compatible)
+
+AI (later) — OpenAI or similar for summaries, tagging, moderation
+
+Scalable data model optimized for tree structures
+
+Future Features (Phase 2–3)
+
+AI-generated summaries
+
+Consensus / controversy scores
+
+Visual debate maps
+
+Strongest-argument highlighting
+
+Credibility-weighted influence
+
+Verified experts
+
+Topic moderators / governance
+
+Monetization (ads, subscriptions, tipping)
+
+API / embeds

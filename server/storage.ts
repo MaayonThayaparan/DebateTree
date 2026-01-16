@@ -10,17 +10,23 @@ import { eq, and, desc, sql, or, ilike } from "drizzle-orm";
 
 export interface IStorage {
   // Topics
-  getTopics(sort: "latest" | "trending" | "top"): Promise<(Topic & { author?: User | null })[]>;
+  getTopics(sort: "latest" | "trending" | "top", country?: string): Promise<(Topic & { author?: User | null })[]>;
   getTopic(id: string): Promise<(Topic & { author?: User | null }) | undefined>;
   createTopic(topic: InsertTopic): Promise<Topic>;
+  updateTopic(id: string, data: { title?: string; content?: string }, userId: string): Promise<Topic | null>;
+  deleteTopic(id: string, userId: string): Promise<{ deleted: boolean; softDeleted: boolean }>;
   searchTopics(query: string): Promise<(Topic & { author?: User | null })[]>;
   getUserTopics(userId: string): Promise<Topic[]>;
   updateTopicCounts(id: string): Promise<void>;
 
   // Nodes
   getTopicNodes(topicId: string): Promise<(Node & { author?: User | null })[]>;
+  getNode(id: string): Promise<Node | undefined>;
   createNode(node: InsertNode): Promise<Node>;
+  updateNode(id: string, content: string, userId: string): Promise<Node | null>;
+  deleteNode(id: string, userId: string): Promise<{ deleted: boolean; softDeleted: boolean }>;
   updateNodeCounts(id: string): Promise<void>;
+  promoteNodeToTopic(nodeId: string, title: string, userId: string): Promise<Topic | null>;
 
   // Reactions
   getUserReactions(userId: string, topicId: string): Promise<Reaction[]>;
@@ -32,7 +38,7 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   // Topics
-  async getTopics(sort: "latest" | "trending" | "top"): Promise<(Topic & { author?: User | null })[]> {
+  async getTopics(sort: "latest" | "trending" | "top", country?: string): Promise<(Topic & { author?: User | null })[]> {
     let orderBy;
     switch (sort) {
       case "trending":
@@ -46,6 +52,11 @@ export class DatabaseStorage implements IStorage {
         orderBy = desc(topics.createdAt);
     }
     
+    const conditions = [eq(topics.isDeleted, false)];
+    if (country) {
+      conditions.push(eq(topics.country, country));
+    }
+    
     const result = await db
       .select({
         topic: topics,
@@ -53,6 +64,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(topics)
       .leftJoin(users, eq(topics.authorId, users.id))
+      .where(and(...conditions))
       .orderBy(orderBy)
       .limit(50);
     
@@ -76,6 +88,31 @@ export class DatabaseStorage implements IStorage {
   async createTopic(topic: InsertTopic): Promise<Topic> {
     const [created] = await db.insert(topics).values(topic).returning();
     return created;
+  }
+
+  async updateTopic(id: string, data: { title?: string; content?: string }, userId: string): Promise<Topic | null> {
+    const [topic] = await db.select().from(topics).where(eq(topics.id, id));
+    if (!topic || topic.authorId !== userId) return null;
+    
+    const [updated] = await db
+      .update(topics)
+      .set({ ...data, editedAt: new Date() })
+      .where(eq(topics.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Patch .001: Always soft delete to maintain thread integrity
+  async deleteTopic(id: string, userId: string): Promise<{ deleted: boolean; softDeleted: boolean }> {
+    const [topic] = await db.select().from(topics).where(eq(topics.id, id));
+    if (!topic || topic.authorId !== userId) return { deleted: false, softDeleted: false };
+    
+    // Always soft delete to preserve thread integrity
+    await db
+      .update(topics)
+      .set({ authorId: null, isDeleted: true })
+      .where(eq(topics.id, id));
+    return { deleted: true, softDeleted: true };
   }
 
   async searchTopics(query: string): Promise<(Topic & { author?: User | null })[]> {
@@ -154,6 +191,11 @@ export class DatabaseStorage implements IStorage {
     return result.map(r => ({ ...r.node, author: r.author }));
   }
 
+  async getNode(id: string): Promise<Node | undefined> {
+    const [node] = await db.select().from(nodes).where(eq(nodes.id, id));
+    return node;
+  }
+
   async createNode(node: InsertNode): Promise<Node> {
     const [created] = await db.insert(nodes).values(node).returning();
     
@@ -166,6 +208,31 @@ export class DatabaseStorage implements IStorage {
     await this.updateTopicCounts(node.topicId);
     
     return created;
+  }
+
+  async updateNode(id: string, content: string, userId: string): Promise<Node | null> {
+    const [node] = await db.select().from(nodes).where(eq(nodes.id, id));
+    if (!node || node.authorId !== userId) return null;
+    
+    const [updated] = await db
+      .update(nodes)
+      .set({ content, editedAt: new Date() })
+      .where(eq(nodes.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Patch .001: Always soft delete to maintain thread integrity
+  async deleteNode(id: string, userId: string): Promise<{ deleted: boolean; softDeleted: boolean }> {
+    const [node] = await db.select().from(nodes).where(eq(nodes.id, id));
+    if (!node || node.authorId !== userId) return { deleted: false, softDeleted: false };
+    
+    // Always soft delete to preserve thread integrity
+    await db
+      .update(nodes)
+      .set({ authorId: null, isDeleted: true })
+      .where(eq(nodes.id, id));
+    return { deleted: true, softDeleted: true };
   }
 
   async updateNodeCounts(id: string): Promise<void> {
@@ -192,6 +259,27 @@ export class DatabaseStorage implements IStorage {
       .update(nodes)
       .set({ replyCount, likeCount, dislikeCount })
       .where(eq(nodes.id, id));
+  }
+
+  async promoteNodeToTopic(nodeId: string, title: string, userId: string): Promise<Topic | null> {
+    // Get the node to promote
+    const [node] = await db.select().from(nodes).where(eq(nodes.id, nodeId));
+    if (!node || node.isDeleted) return null;
+    
+    // Create a new topic from the node content
+    const [newTopic] = await db
+      .insert(topics)
+      .values({
+        title,
+        content: node.content,
+        authorId: userId,
+        imageUrl: node.imageUrl,
+        promotedFromNodeId: nodeId,
+        promotedFromTopicId: node.topicId,
+      })
+      .returning();
+    
+    return newTopic;
   }
 
   // Reactions

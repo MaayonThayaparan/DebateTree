@@ -7,11 +7,21 @@ import {
   CheckCircle,
   XCircle,
   Minus,
-  Reply
+  Reply,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  ArrowUpCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import type { Node, NodeType } from "@shared/schema";
@@ -25,8 +35,12 @@ interface DiscussionNodeProps {
   onReply?: (nodeId: string, authorName: string) => void;
   onLike?: (nodeId: string) => void;
   onDislike?: (nodeId: string) => void;
+  onEdit?: (nodeId: string) => void;
+  onDelete?: (nodeId: string) => void;
+  onPromote?: (nodeId: string) => void;
   userReaction?: "like" | "dislike" | null;
   isAuthenticated?: boolean;
+  currentUserId?: string | null;
 }
 
 const nodeTypeConfig = {
@@ -61,8 +75,12 @@ export function DiscussionNode({
   onReply,
   onLike,
   onDislike,
+  onEdit,
+  onDelete,
+  onPromote,
   userReaction,
   isAuthenticated = false,
+  currentUserId,
 }: DiscussionNodeProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   
@@ -72,6 +90,9 @@ export function DiscussionNode({
   const hasChildren = node.replyCount > 0;
   const maxDepth = 4;
   const isMaxDepth = depth >= maxDepth;
+  const isOwner = currentUserId && node.authorId === currentUserId;
+  const isDeleted = node.isDeleted;
+  const isEdited = node.editedAt != null;
   
   return (
     <div 
@@ -105,10 +126,18 @@ export function DiscussionNode({
         />
         <div className="flex gap-2.5">
           <Avatar className="h-8 w-8 flex-shrink-0">
-            <AvatarImage src={author?.profileImageUrl || undefined} />
-            <AvatarFallback className="bg-card text-xs font-medium">
-              {author?.firstName?.[0] || "A"}
-            </AvatarFallback>
+            {isDeleted ? (
+              <AvatarFallback className="bg-muted text-xs font-medium text-muted-foreground">
+                ?
+              </AvatarFallback>
+            ) : (
+              <>
+                <AvatarImage src={author?.profileImageUrl || undefined} />
+                <AvatarFallback className="bg-card text-xs font-medium">
+                  {author?.firstName?.[0] || "A"}
+                </AvatarFallback>
+              </>
+            )}
           </Avatar>
           
           <div className="flex-1 min-w-0">
@@ -120,10 +149,62 @@ export function DiscussionNode({
                 <TypeIcon className="h-3 w-3" />
                 {config.label}
               </Badge>
-              <span className="font-medium text-sm">
-                {author?.firstName || "Anonymous"}
-              </span>
+              {isDeleted ? (
+                <span className="font-medium text-sm text-muted-foreground italic">
+                  [deleted]
+                </span>
+              ) : (
+                <span className="font-medium text-sm">
+                  {author?.firstName || "Anonymous"}
+                </span>
+              )}
               <span className="text-muted-foreground text-xs">{timeAgo}</span>
+              {isEdited && !isDeleted && (
+                <span className="text-muted-foreground text-xs italic">(edited)</span>
+              )}
+              
+              {isAuthenticated && !isDeleted && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 ml-auto"
+                      data-testid={`button-menu-${node.id}`}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem 
+                      onClick={() => onPromote?.(node.id)}
+                      data-testid={`button-promote-${node.id}`}
+                    >
+                      <ArrowUpCircle className="h-4 w-4 mr-2" />
+                      Start New Discussion
+                    </DropdownMenuItem>
+                    {isOwner && (
+                      <>
+                        <DropdownMenuItem 
+                          onClick={() => onEdit?.(node.id)}
+                          data-testid={`button-edit-${node.id}`}
+                        >
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => onDelete?.(node.id)}
+                          className="text-destructive"
+                          data-testid={`button-delete-${node.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
             
             <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">

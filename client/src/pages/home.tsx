@@ -1,8 +1,15 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { TreePine, RefreshCw } from "lucide-react";
+import { TreePine, RefreshCw, MapPin, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { TopicCard, TopicCardSkeleton } from "@/components/topic-card";
 import { CreateTopicModal } from "@/components/create-topic-modal";
 import { MobileNav } from "@/components/mobile-nav";
@@ -18,12 +25,40 @@ interface TopicWithAuthor extends Topic {
   author?: User | null;
 }
 
+const COUNTRIES = [
+  "United States",
+  "United Kingdom",
+  "Canada",
+  "Australia",
+  "Germany",
+  "France",
+  "Japan",
+  "India",
+  "Brazil",
+  "Mexico",
+  "Global",
+];
+
 export default function HomePage() {
   const [sort, setSort] = useState<SortOption>("latest");
+  const [country, setCountry] = useState<string>("");
   const { isAuthenticated } = useAuth();
 
+  const buildTopicsUrl = () => {
+    const params = new URLSearchParams();
+    if (sort) params.set("sort", sort);
+    if (country && country !== "all") params.set("country", country);
+    const queryString = params.toString();
+    return queryString ? `/api/topics?${queryString}` : "/api/topics";
+  };
+
   const { data: topics, isLoading, refetch, isRefetching } = useQuery<TopicWithAuthor[]>({
-    queryKey: ["/api/topics", { sort }],
+    queryKey: ["/api/topics", sort, country],
+    queryFn: async () => {
+      const res = await fetch(buildTopicsUrl(), { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch topics");
+      return res.json();
+    },
   });
 
   return (
@@ -46,6 +81,28 @@ export default function HomePage() {
           </Tabs>
           
           <div className="flex items-center gap-1">
+            <Select value={country} onValueChange={setCountry}>
+              <SelectTrigger className="w-8 h-8 p-0 border-none" data-testid="select-country">
+                <MapPin className="h-4 w-4" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Locations</SelectItem>
+                {COUNTRIES.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {country && country !== "all" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCountry("")}
+                className="h-6 w-6"
+                data-testid="button-clear-country"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"

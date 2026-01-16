@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { X, Plus, ImageIcon, Loader2 } from "lucide-react";
+import { X, Plus, ImageIcon, Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,9 +11,30 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
+
+const COUNTRIES = [
+  "United States",
+  "United Kingdom",
+  "Canada",
+  "Australia",
+  "Germany",
+  "France",
+  "Japan",
+  "India",
+  "Brazil",
+  "Mexico",
+  "Global",
+];
 
 interface CreateTopicModalProps {
   trigger?: React.ReactNode;
@@ -24,11 +45,12 @@ export function CreateTopicModal({ trigger }: CreateTopicModalProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [country, setCountry] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const createTopicMutation = useMutation({
-    mutationFn: async (data: { title: string; content: string; imageUrl?: string }) => {
+    mutationFn: async (data: { title: string; content: string; imageUrl?: string; country?: string }) => {
       return apiRequest("POST", "/api/topics", data);
     },
     onSuccess: () => {
@@ -41,6 +63,7 @@ export function CreateTopicModal({ trigger }: CreateTopicModalProps) {
       setTitle("");
       setContent("");
       setImageUrl("");
+      setCountry("");
     },
     onError: (error: Error) => {
       if (isUnauthorizedError(error)) {
@@ -70,6 +93,7 @@ export function CreateTopicModal({ trigger }: CreateTopicModalProps) {
       title: title.trim(),
       content: content.trim(),
       imageUrl: imageUrl.trim() || undefined,
+      country: country || undefined,
     });
   };
 
@@ -120,6 +144,21 @@ export function CreateTopicModal({ trigger }: CreateTopicModalProps) {
                 className="flex-1"
                 data-testid="input-topic-image"
               />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <Select value={country} onValueChange={setCountry}>
+                <SelectTrigger className="flex-1" data-testid="select-topic-country">
+                  <SelectValue placeholder="Location (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {COUNTRIES.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="flex justify-end gap-2">

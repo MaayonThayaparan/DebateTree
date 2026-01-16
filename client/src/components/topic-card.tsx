@@ -1,4 +1,4 @@
-import { ThumbsUp, ThumbsDown, MessageSquare, CheckCircle, XCircle } from "lucide-react";
+import { ThumbsUp, ThumbsDown, MessageSquare, CheckCircle, XCircle, MapPin } from "lucide-react";
 import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -31,10 +31,23 @@ export function TopicCard({ topic, author }: TopicCardProps) {
           
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-medium text-sm truncate">
-                {author?.firstName || "Anonymous"} {author?.lastName || ""}
-              </span>
+              {topic.isDeleted ? (
+                <span className="font-medium text-sm text-muted-foreground italic">[deleted]</span>
+              ) : (
+                <span className="font-medium text-sm truncate">
+                  {author?.firstName || "Anonymous"} {author?.lastName || ""}
+                </span>
+              )}
               <span className="text-muted-foreground text-xs">{timeAgo}</span>
+              {topic.editedAt && !topic.isDeleted && (
+                <span className="text-muted-foreground text-xs italic">(edited)</span>
+              )}
+              {topic.country && (
+                <span className="text-muted-foreground text-xs flex items-center gap-0.5">
+                  <MapPin className="h-3 w-3" />
+                  {topic.country}
+                </span>
+              )}
             </div>
             
             <h3 className="font-semibold text-base mt-1 line-clamp-2 leading-snug">
